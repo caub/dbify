@@ -19,7 +19,7 @@
     function post(data, cb){
     	$.ajax({
       	  type: "POST",
-      	  url: "http://localhost:8080/mongo",
+      	  url: "/mongo",
       	  data: JSON.stringify(data),
       	  success: cb,
       	  contentType : 'application/json',
