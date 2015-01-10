@@ -7,9 +7,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mongodb.BasicDBList;
@@ -22,20 +24,25 @@ import com.mongodb.WriteConcern;
 import com.mongodb.WriteConcernException;
 import com.mongodb.WriteResult;
 
-@RestController
+@Controller
 public class MongoCliController {
 	
 	@Autowired
 	private DB db;
 	
+	@RequestMapping("/greeting")
+	public @ResponseBody String greeting(){
+		return "test";
+	}
+	
 	@RequestMapping(value = "/test", method = RequestMethod.POST)
-	public Object test(@RequestBody BasicDBObject message){
+	public @ResponseBody Object test(@RequestBody BasicDBObject message){
 		return new BasicDBObject("test", message);
 	}
 	
 	
 	@RequestMapping(value = "/mongo", method = RequestMethod.POST)
-	public Object mongo(@RequestBody BasicDBObject message){
+	public @ResponseBody Object mongo(@RequestBody BasicDBObject message){
 		String collection = message.getString("collection", "foo");
 		String method = message.getString("method", "find");
 		Object[] args = ((ArrayList) message.get("args")).toArray();
