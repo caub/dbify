@@ -6,11 +6,14 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 
+import javax.swing.plaf.basic.BasicScrollBarUI;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -42,36 +45,37 @@ public class MongoCliController {
 	
 	
 	@RequestMapping(value = "/mongo", method = RequestMethod.POST)
-	public @ResponseBody Object mongo(@RequestBody BasicDBObject message){
-		String collection = message.getString("collection", "foo");
-		String method = message.getString("method", "find");
-		Object[] args = ((ArrayList) message.get("args")).toArray();
+	public @ResponseBody Object mongo(
+			@RequestParam(value="method", required=false, defaultValue="find") String method,
+			@RequestParam(value="collection", required=false, defaultValue="foo") String collection,
+			@RequestBody Object message){
+		
+		Object[] args = message instanceof LinkedHashMap ? new Object[]{ message} : ((ArrayList) message).toArray();
+
+		System.out.println(message.getClass());
+
 		DBCollection coll = db.getCollection(collection);
 		
 		Class[] types = new Class[args.length];
-		if(method.equals("insert") ){
-			// wraps insert(DBObject) in insert(DBObject...) or insert(List<DBObject>) because it fails
-			List<DBObject> temp = new ArrayList<DBObject>();
-			args[0] = unwrap(Arrays.asList(args));
-			types[0] = List.class;
-
-        }else{
-        	for (int i = 0; i < args.length; i++) {
-                if (args[i] == null) types[i] = DBObject.class;
-                else {
-                	types[i] = args[i].getClass();
-                    if (types[i].equals(LinkedHashMap.class)){ // convert Maps to DBObjects
-                    	args[i] = new BasicDBObject( (LinkedHashMap) args[i]);
-                    	types[i] = DBObject.class;
-                    }else if(types[i].equals(Boolean.class)){
-                    	types[i] = boolean.class;
-                    }
+		
+    	for (int i = 0; i < args.length; i++) {
+            if (args[i] == null) types[i] = DBObject.class;
+            else {
+            	types[i] = args[i].getClass();
+                if (types[i].equals(LinkedHashMap.class)){ // convert Maps to DBObjects
+                	args[i] = new BasicDBObject( (LinkedHashMap) args[i]);
+                	types[i] = DBObject.class;
+                }else if(types[i].equals(Boolean.class)){
+                	types[i] = boolean.class;
                 }
             }
         }
-        
-        
-        
+    	if(method.equals("insert") ){
+			// wraps insert(DBObject) in insert(DBObject...) or insert(List<DBObject>) because it fails
+			args[0] = Arrays.asList(args[0]);
+			types[0] = List.class;
+        }
+
 		Object result = null;
 		try {
 			result = coll.getClass().getMethod(method, types).invoke(coll, args);
@@ -98,13 +102,13 @@ public class MongoCliController {
 	}
 	
 	
-	public List<DBObject> unwrap(List<Object> args){
+	public List<DBObject> wrap(List<Object> args){
 		List<DBObject> ret = new ArrayList<DBObject>();
 		for (Object o : args){
 			if (o.getClass().equals(LinkedHashMap.class)){
 				ret.add(new BasicDBObject( (LinkedHashMap) o));
 			}else if (o.getClass().equals(ArrayList.class)){
-				ret.addAll(unwrap((ArrayList) o));
+				ret.addAll(wrap((ArrayList) o));
 			}
 		}
 		return ret;

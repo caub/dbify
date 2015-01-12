@@ -5,37 +5,49 @@
     <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
     <script type="text/javascript">
     
-    /*.
-    Requests must have this format: {"method": "...", "args": [...], collection: "..."}
-    where "method" and "args" follows the <a href="http://api.mongodb.org/java/current/com/mongodb/DBCollection.html">API</a>
-    and "collection" is the Mongo's collection to use ("foo" by default)
-    
-    post({"method": "insert", "args": [{"hello": 1}]}, function(d){console.log(d)}) // insert an object
-    post({"method": "find", "args": [{"hello": 1}]}, function(d){console.log(d)})   // find it
-    post({"method": "remove", "args": [{"hello": 1}]}, function(d){console.log(d)}) // remove it   
-   
-    */
+    function post(data){
+    	return new Promise(function(resolve, reject) {
+    		var req = new XMLHttpRequest();
+            req.open("POST", "/mongo?method="+data[0]);
+            req.setRequestHeader("Content-type", "application/json");
+            req.setRequestHeader("Accept", "application/json");
+            req.onload = function() {
+    			if (req.status == 200) {
+    				resolve(req.response);
+    			}
+    			else {
+    				reject(Error(req.statusText));
+    			}
+            };
 
-    function post(data, cb){
-    	$.ajax({
-      	  type: "POST",
-      	  url: "/mongo",
-      	  data: JSON.stringify(data),
-      	  success: cb,
-      	  contentType : 'application/json',
-      	  dataType: 'json'
-      	});
+            req.onerror = function() {
+    			reject(Error("Erreur réseau"));
+            };
+
+            req.send(data[1]);
+    	});
     }
+
     
     $(document).ready(function() {
-    	$("button.method").click(function() {
-    		var t = this;
-    		$(t).next().val("");
-           	post({"method": $(this).html(), "args": JSON.parse($(t).prev().val())}, function(d){
-           		$(t).next().val(JSON.stringify(d));
-           	})
+    	$("button").click(function() {
+    		// now chain all selected textarea
+    		$("input:checked").each(function(_,i) {$(i).next().next().val("")})
+    		
+    		var promise = Promise.resolve();
+    		$("input:checked")
+    		.each(function(_,i) {
+    			var data = $(i).next().val().split(/\ (.+)?/,2)
+				promise = promise
+					.then(function() { return post(data); })
+					.then(function(response) { $(i).next().next().val(response) });
+			})
+    		
+           	
         });
     })
+    
+    
     
     
     </script>
@@ -46,66 +58,83 @@
 <h1>Mongo Cli</h1>
 <p>Mongo Cli is a server for executing MongoDB commands in the <a href="http://api.mongodb.org/java/current/com/mongodb/DBCollection.html">Java api</a></p>
 
+<button class="method" style="margin-left: 445px;">send</button>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">find</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">find {"hello": 1}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">findOne</button>
+	<input type="checkbox">
+	<textarea class="input" rows="1" cols="60">findOne {"hello": 1}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">count</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">count {"hello": 1}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 2}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">count</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">count {"hello": 2}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">insert</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">insert {"hello": 1}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 2}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">save</button>
+	<input type="checkbox">
+	<textarea class="input" rows="1" cols="60">save {"hello": 2}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1},{"hello": 2},false,false]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">update</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">count {"hello": 1}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1},{"$set":{"hello": 2}},false,true]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">update</button>
+	<input type="checkbox">
+	<textarea class="input" rows="1" cols="60">update [{"hello": 1},{"hello": 2},false,false]</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 3},{"$set":{"hello": 2}},true,true]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">update</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">update [{"hello": 1},{"$set":{"hello": 2}},false,true]</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 1},{"hello": 2}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">findAndModify</button>
+	<input type="checkbox">
+	<textarea class="input" rows="1" cols="60">update [{"hello": 3},{"$set":{"hello": 2}},true,true]</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": 2}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">remove</button>
+	<input type="checkbox">
+	<textarea class="input" rows="1" cols="60">findAndModify [{"hello": 1},{"hello": 2}]</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
 <div>
-	<textarea class="input" rows="1" cols="50">[{"hello": {"$exists": true}}]</textarea>
-	<button class="method" style="vertical-align: 40%;width:75px">remove</button>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">count {"hello": 2}</textarea>
 	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
 </div>
+<div>
+	<input type="checkbox">
+	<textarea class="input" rows="1" cols="60">remove {"hello": 2}</textarea>
+	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
+</div>
+<div>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">remove {"hello": {"$exists": true}}</textarea>
+	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
+</div>
+<div>
+	<input type="checkbox" checked>
+	<textarea class="input" rows="1" cols="60">count {"hello": 2}</textarea>
+	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
+</div>
+
 
 </body>
 </html>
