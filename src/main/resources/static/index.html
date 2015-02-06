@@ -2,18 +2,21 @@
 <html>
 <head>
     <title>Hello</title>
-    <script src="//code.jquery.com/jquery-1.11.2.min.js"></script>
+
     <script type="text/javascript">
     
-    function post(data){
+    function post(url, data){
     	return new Promise(function(resolve, reject) {
     		var req = new XMLHttpRequest();
-            req.open("POST", "/mongo?method="+data[0]);
+            req.open("POST", url);
             req.setRequestHeader("Content-type", "application/json");
             req.setRequestHeader("Accept", "application/json");
             req.onload = function() {
     			if (req.status == 200) {
-    				resolve(req.response);
+    			    if (req.response.indexOf("Exception: ")===0)
+    					reject(req.response.substring("Exception: ".length));
+    				else
+    					resolve(req.response);
     			}
     			else {
     				reject(Error(req.statusText));
@@ -21,120 +24,195 @@
             };
 
             req.onerror = function() {
-    			reject(Error("Erreur réseau"));
+    			reject(Error("Network error"));
             };
 
-            req.send(data[1]);
+            req.send(data);
     	});
+    }
+    
+    function postSql(data){
+    	return post("/sql", data);
+    }
+
+    function postMongo(data){
+    	return post("/mongo", data);
     }
 
     
-    $(document).ready(function() {
-    	$("button").click(function() {
-    		// now chain all selected textarea
-    		$("input:checked").each(function(_,i) {$(i).next().next().val("")})
-    		
-    		var promise = Promise.resolve();
-    		$("input:checked")
-    		.each(function(_,i) {
-    			var data = $(i).next().val().split(/\ (.+)?/,2)
-				promise = promise
-					.then(function() { return post(data); })
-					.then(function(response) { $(i).next().next().val(response) });
+    window.onload = function(){
+		document.querySelector(".sql button").onclick = function() {
+		    $(".sql input:checked").map(function(el){return el.parentElement.children[1]}).map(function(el){ 
+				postSql(el.value).then(function(response) {
+				    el.parentElement.children[2].style.color = "";
+				    el.parentElement.children[2].value = response
+				}, function(response) {
+				    el.parentElement.children[2].style.color = "red";
+				    el.parentElement.children[2].value = response
+				})
 			})
+        }
+    	document.querySelector(".mongo button").onclick = function() {
+	    	$(".mongo input:checked").map(function(el){return el.parentElement.children[1]}).map(function(el){ 
+				postMongo(el.value).then(function(response) {
+				    el.parentElement.children[2].style.color = "";
+				    el.parentElement.children[2].value = response
+				}, function(response) {
+				    el.parentElement.children[2].style.color = "red";
+				    el.parentElement.children[2].value = response
+				})
+			})
+    	    /*var inputs = $(".mongo input:checked"),
+    	    	cmds = inputs.map(function(el){return el.parentElement.children[1].value});
     		
-           	
-        });
-    })
+    	    Promise.all( cmds.map(postMongo) ).then(function(values) {
+    			inputs.map(function(el){return el.parentElement.children[2]}).forEach(function(el, i){
+    				el.value = values[i];
+    				el.style.color = values[i].error?"red":"";
+    			})
+    		});*/
+        }
+
+    }
     
-    
-    
-    
+    //ex
+    /*postSql(JSON.stringify(["INSERT INTO Test (name) VALUES (?);", 'foo']))
+     .then(function(data){
+         return postSql(JSON.stringify(["SELECT * FROM Test"]))
+     }).then(function(response) {
+   	  console.log(response);
+   	 });*/
+   	 
+	function $(s) {
+		return [].slice.apply(document.querySelectorAll(s));
+	}
+
     </script>
+    <style>
+    li {
+    	list-style-type: none;
+    	margin-left: -20px;
+    }
+    h4 > *{ display: inline-block;}
+	h4 > span{ width: 100px; }
+	h4 {margin-bottom:0;}
+    </style>
 </head>
 <body>
-<a href="https://github.com/cauburtin/mongo-cli-spring"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+<a href="https://github.com/cauburtin/dbify"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on Github"></a>
+<h2>dbify: DB sandbox</h2>
+<h4 class="sql"><span>SQL (H2)</span> <button>send</button></h4>
+<ul class="sql">
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["create table test ( id int auto_increment primary key,  name varchar);"]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>	
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["insert into test (name) values (?);", "foo"]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>	
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["select * from test"]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>	
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["delete from test"]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>	
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["insert into test (name) values (?),(?),(?);", 12, "bar", "kux"]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>	
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["select * from test where name like ?", "%oo%"]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+</ul>
 
-<h1>Mongo Cli</h1>
-<p>Mongo Cli is a server for executing MongoDB commands in the <a href="http://api.mongodb.org/java/current/com/mongodb/DBCollection.html">Java api</a></p>
-
-<button class="method" style="margin-left: 445px;">send</button>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">find {"hello": 1}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox">
-	<textarea class="input" rows="1" cols="60">findOne {"hello": 1}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">count {"hello": 1}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">count {"hello": 2}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">insert {"hello": 1}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox">
-	<textarea class="input" rows="1" cols="60">save {"hello": 2}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">count {"hello": 1}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox">
-	<textarea class="input" rows="1" cols="60">update [{"hello": 1},{"hello": 2},false,false]</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">update [{"hello": 1},{"$set":{"hello": 2}},false,true]</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox">
-	<textarea class="input" rows="1" cols="60">update [{"hello": 3},{"$set":{"hello": 2}},true,true]</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox">
-	<textarea class="input" rows="1" cols="60">findAndModify [{"hello": 1},{"hello": 2}]</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">count {"hello": 2}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox">
-	<textarea class="input" rows="1" cols="60">remove {"hello": 2}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">remove {"hello": {"$exists": true}}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-<div>
-	<input type="checkbox" checked>
-	<textarea class="input" rows="1" cols="60">count {"hello": 2}</textarea>
-	<textarea class="output" rows="1" cols="60" placeholder="result..."></textarea>
-</div>
-
+<h4 class="mongo"><span>Mongo DB</span> <button>send</button></h4>
+<ul class="mongo">
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["find", {"hello": 1}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox">
+		<textarea rows="1" cols="60">["findOne", {"hello": 1}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["count", {"hello": 1}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["count", {"hello": 2}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["insert", {"hello": 1}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox">
+		<textarea rows="1" cols="60">["save", {"hello": 2}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["count", {"hello": 1}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox">
+		<textarea rows="1" cols="60">["update", {"hello": 1},{"hello": 2},false,false]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["update", {"hello": 1},{"$set":{"hello": 2}},false,true]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox">
+		<textarea rows="1" cols="60">["update", {"hello": 3},{"$set":{"hello": 2}},true,true]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox">
+		<textarea rows="1" cols="60">["findAndModify", {"hello": 1},{"hello": 2}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["count", {"hello": 2}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox">
+		<textarea rows="1" cols="60">["remove", {"hello": 2}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["remove", {"hello": {"$exists": true}}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+	<li>
+		<input type="checkbox" checked>
+		<textarea rows="1" cols="60">["count", {"hello": 2}]</textarea>
+		<textarea rows="1" cols="60" placeholder="result..."></textarea>
+	</li>
+</ul>
 
 </body>
 </html>

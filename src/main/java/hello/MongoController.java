@@ -28,30 +28,19 @@ import com.mongodb.WriteConcernException;
 import com.mongodb.WriteResult;
 
 @Controller
-public class MongoCliController {
+public class MongoController {
 	
 	@Autowired
 	private DB db;
 	
-	@RequestMapping("/greeting")
-	public @ResponseBody String greeting(){
-		return "test";
-	}
-	
-	@RequestMapping(value = "/test", method = RequestMethod.POST)
-	public @ResponseBody Object test(@RequestBody BasicDBObject message){
-		return new BasicDBObject("test", message);
-	}
-	
 	
 	@RequestMapping(value = "/mongo", method = RequestMethod.POST)
 	public @ResponseBody Object mongo(
-			@RequestParam(value="method", required=false, defaultValue="find") String method,
 			@RequestParam(value="collection", required=false, defaultValue="foo") String collection,
-			@RequestBody Object message){
+			@RequestBody List<Object> message){
 		
-		Object[] args = message instanceof LinkedHashMap ? new Object[]{ message} : ((ArrayList) message).toArray();
-
+		String method = (String) message.remove(0);
+		Object[] args = message.toArray();
 		System.out.println(message.getClass());
 
 		DBCollection coll = db.getCollection(collection);
@@ -84,7 +73,7 @@ public class MongoCliController {
 				| SecurityException | WriteConcernException e) {
 			
 			e.printStackTrace();
-			return new BasicDBObject("error", e.getMessage());
+			return "Exception: "+e.getMessage();
 		}
 		
 		if (method.equals("find")){
@@ -101,17 +90,10 @@ public class MongoCliController {
 		return result;
 	}
 	
-	
-	public List<DBObject> wrap(List<Object> args){
-		List<DBObject> ret = new ArrayList<DBObject>();
-		for (Object o : args){
-			if (o.getClass().equals(LinkedHashMap.class)){
-				ret.add(new BasicDBObject( (LinkedHashMap) o));
-			}else if (o.getClass().equals(ArrayList.class)){
-				ret.addAll(wrap((ArrayList) o));
-			}
-		}
-		return ret;
+	@RequestMapping(value = "/test", method = RequestMethod.POST)
+	public @ResponseBody Object test(@RequestBody BasicDBObject message){
+		return new BasicDBObject("test", message);
 	}
+	
 
 }
