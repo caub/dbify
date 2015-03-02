@@ -42,6 +42,7 @@
     
     window.onload = function(){
 		document.querySelector(".sql button").onclick = function() {
+			$(".sql > li > textarea:nth-child(3)").forEach(function(el){el.value=''})	
 		    $(".sql input:checked").map(function(el){return el.parentElement.children[1]}).map(function(el){ 
 				postSql(el.value).then(function(response) {
 				    el.parentElement.children[2].style.color = "";
@@ -53,6 +54,7 @@
 			})
         }
     	document.querySelector(".mongo button").onclick = function() {
+    		$(".mongo > li > textarea:nth-child(3)").forEach(function(el){el.value=''})
 	    	$(".mongo input:checked").map(function(el){return el.parentElement.children[1]}).map(function(el){ 
 				postMongo(el.value).then(function(response) {
 				    el.parentElement.children[2].style.color = "";
